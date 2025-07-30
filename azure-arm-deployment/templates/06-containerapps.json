@@ -1,0 +1,307 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "defaultValue": "paymentapp",
+      "metadata": {
+        "description": "Nombre base del proyecto"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": [
+        "dev",
+        "test",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Entorno de despliegue"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Ubicación para todos los recursos"
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "metadata": {
+        "description": "Nombre del entorno de Container Apps existente"
+      }
+    },
+    "backendImageName": {
+      "type": "string",
+      "metadata": {
+        "description": "Nombre completo de la imagen Docker del backend"
+      }
+    },
+    "frontendImageName": {
+      "type": "string",
+      "metadata": {
+        "description": "Nombre completo de la imagen Docker del frontend"
+      }
+    },
+    "registryServer": {
+      "type": "string",
+      "metadata": {
+        "description": "Servidor del registro de contenedores"
+      }
+    },
+    "registryUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Usuario del registro de contenedores"
+      }
+    },
+    "registryPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Contraseña del registro de contenedores"
+      }
+    },
+    "postgresConnectionString": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Cadena de conexión a PostgreSQL"
+      }
+    },
+    "applicationInsightsConnectionString": {
+      "type": "string",
+      "metadata": {
+        "description": "Connection string de Application Insights"
+      }
+    },
+    "apiMinReplicas": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Número mínimo de réplicas para la API"
+      }
+    },
+    "apiMaxReplicas": {
+      "type": "int",
+      "defaultValue": 5,
+      "metadata": {
+        "description": "Número máximo de réplicas para la API"
+      }
+    },
+    "frontendMinReplicas": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "Número mínimo de réplicas para el frontend"
+      }
+    },
+    "frontendMaxReplicas": {
+      "type": "int",
+      "defaultValue": 3,
+      "metadata": {
+        "description": "Número máximo de réplicas para el frontend"
+      }
+    },
+    "costCenter": {
+      "type": "string",
+      "defaultValue": "IT-Development",
+      "metadata": {
+        "description": "Centro de costos para facturación"
+      }
+    },
+    "owner": {
+      "type": "string",
+      "defaultValue": "DevOps-Team",
+      "metadata": {
+        "description": "Responsable del recurso"
+      }
+    }
+  },
+  "variables": {
+    "apiContainerAppName": "[concat('app-', parameters('projectName'), '-', parameters('environment'), '-api')]",
+    "frontendContainerAppName": "[concat('app-', parameters('projectName'), '-', parameters('environment'), '-frontend')]",
+    "commonTags": {
+      "Environment": "[parameters('environment')]",
+      "Project": "[parameters('projectName')]",
+      "CostCenter": "[parameters('costCenter')]",
+      "Owner": "[parameters('owner')]",
+      "CreatedBy": "ARM Template",
+      "ManagedBy": "Infrastructure-as-Code",
+      "Purpose": "Payment Application Runtime"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('apiContainerAppName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]",
+        "configuration": {
+          "secrets": [
+            {
+              "name": "postgres-connection-string",
+              "value": "[parameters('postgresConnectionString')]"
+            },
+            {
+              "name": "registry-password",
+              "value": "[parameters('registryPassword')]"
+            }
+          ],
+          "registries": [
+            {
+              "server": "[parameters('registryServer')]",
+              "username": "[parameters('registryUsername')]",
+              "passwordSecretRef": "registry-password"
+            }
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 8080,
+            "transport": "auto",
+            "traffic": [
+              {
+                "weight": 100,
+                "latestRevision": true
+              }
+            ]
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "image": "[parameters('backendImageName')]",
+              "name": "[variables('apiContainerAppName')]",
+              "env": [
+                {
+                  "name": "ConnectionStrings__DefaultConnection",
+                  "secretRef": "postgres-connection-string"
+                },
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Production"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('applicationInsightsConnectionString')]"
+                }
+              ],
+              "resources": {
+                "cpu": 0.5,
+                "memory": "1Gi"
+              }
+            }
+          ],
+          "scale": {
+            "minReplicas": "[parameters('apiMinReplicas')]",
+            "maxReplicas": "[parameters('apiMaxReplicas')]",
+            "rules": [
+              {
+                "name": "http-scaling",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "100"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('frontendContainerAppName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]",
+        "configuration": {
+          "secrets": [
+            {
+              "name": "registry-password",
+              "value": "[parameters('registryPassword')]"
+            }
+          ],
+          "registries": [
+            {
+              "server": "[parameters('registryServer')]",
+              "username": "[parameters('registryUsername')]",
+              "passwordSecretRef": "registry-password"
+            }
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 80,
+            "transport": "auto",
+            "traffic": [
+              {
+                "weight": 100,
+                "latestRevision": true
+              }
+            ]
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "image": "[parameters('frontendImageName')]",
+              "name": "[variables('frontendContainerAppName')]",
+              "env": [
+                {
+                  "name": "REACT_APP_API_BASE_URL",
+                  "value": "/api"
+                },
+                {
+                  "name": "NODE_ENV",
+                  "value": "production"
+                }
+              ],
+              "resources": {
+                "cpu": 0.25,
+                "memory": "0.5Gi"
+              }
+            }
+          ],
+          "scale": {
+            "minReplicas": "[parameters('frontendMinReplicas')]",
+            "maxReplicas": "[parameters('frontendMaxReplicas')]",
+            "rules": [
+              {
+                "name": "http-scaling",
+                "http": {
+                  "metadata": {
+                    "concurrentRequests": "50"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "apiContainerAppName": {
+      "type": "string",
+      "value": "[variables('apiContainerAppName')]"
+    },
+    "frontendContainerAppName": {
+      "type": "string",
+      "value": "[variables('frontendContainerAppName')]"
+    },
+    "apiContainerAppFQDN": {
+      "type": "string",
+      "value": "[reference(variables('apiContainerAppName')).configuration.ingress.fqdn]"
+    },
+    "frontendContainerAppFQDN": {
+      "type": "string",
+      "value": "[reference(variables('frontendContainerAppName')).configuration.ingress.fqdn]"
+    }
+  }
+}

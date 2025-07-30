@@ -1,0 +1,197 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "defaultValue": "paymentapp",
+      "metadata": {
+        "description": "Nombre base del proyecto"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": [
+        "dev",
+        "test",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Entorno de despliegue"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Ubicación para todos los recursos"
+      }
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Nombre del workspace de Log Analytics existente"
+      }
+    },
+    "alertEmailAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Email para recibir alertas"
+      }
+    },
+    "costCenter": {
+      "type": "string",
+      "defaultValue": "IT-Development",
+      "metadata": {
+        "description": "Centro de costos para facturación"
+      }
+    },
+    "owner": {
+      "type": "string",
+      "defaultValue": "DevOps-Team",
+      "metadata": {
+        "description": "Responsable del recurso"
+      }
+    }
+  },
+  "variables": {
+    "applicationInsightsName": "[concat('appi-', parameters('projectName'), '-', parameters('environment'))]",
+    "actionGroupName": "[concat('ag-', parameters('projectName'), '-', parameters('environment'))]",
+    "commonTags": {
+      "Environment": "[parameters('environment')]",
+      "Project": "[parameters('projectName')]",
+      "CostCenter": "[parameters('costCenter')]",
+      "Owner": "[parameters('owner')]",
+      "CreatedBy": "ARM Template",
+      "ManagedBy": "Infrastructure-as-Code",
+      "Purpose": "Payment Application Monitoring"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('applicationInsightsName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('actionGroupName')]",
+      "location": "Global",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "groupShortName": "[substring(variables('actionGroupName'), 0, 12)]",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "Email Admin",
+            "emailAddress": "[parameters('alertEmailAddress')]",
+            "useCommonAlertSchema": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "[concat('High CPU Alert - ', parameters('projectName'), ' - ', parameters('environment'))]",
+      "location": "Global",
+      "tags": "[variables('commonTags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+      ],
+      "properties": {
+        "description": "Alert when CPU usage is high",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceGroup().id]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "High CPU",
+              "metricName": "CpuPercentage",
+              "operator": "GreaterThan",
+              "threshold": 80,
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "[concat('High Memory Alert - ', parameters('projectName'), ' - ', parameters('environment'))]",
+      "location": "Global",
+      "tags": "[variables('commonTags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+      ],
+      "properties": {
+        "description": "Alert when Memory usage is high",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceGroup().id]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "High Memory",
+              "metricName": "WorkingSetBytes",
+              "operator": "GreaterThan",
+              "threshold": 1073741824,
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "applicationInsightsName": {
+      "type": "string",
+      "value": "[variables('applicationInsightsName')]"
+    },
+    "instrumentationKey": {
+      "type": "string",
+      "value": "[reference(variables('applicationInsightsName')).InstrumentationKey]"
+    },
+    "connectionString": {
+      "type": "string",
+      "value": "[reference(variables('applicationInsightsName')).ConnectionString]"
+    },
+    "actionGroupName": {
+      "type": "string",
+      "value": "[variables('actionGroupName')]"
+    }
+  }
+}

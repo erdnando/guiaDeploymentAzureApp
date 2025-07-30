@@ -1,0 +1,163 @@
+# ============================================================================
+# GITIGNORE para Proyecto Azure - SEGURIDAD CRÍTICA
+# ============================================================================
+
+# 🔒 ARCHIVOS SENSIBLES - NUNCA SUBIR A GITHUB
+# ============================================================================
+
+# Variables de entorno con contraseñas y secretos
+**/*.env
+**/.env*
+**/dev.env
+**/prod.env
+**/local.env
+**/staging.env
+
+# Archivos temporales con credenciales
+/tmp/cli-vars.env
+/tmp/connection-strings.env
+**/tmp/
+**/.tmp/
+**/temp/
+
+# Archivos de configuración con secretos
+**/secrets/
+**/credentials/
+**/*secret*
+**/*credential*
+**/*password*
+**/*key*
+
+# Archivos de Azure CLI con tokens
+**/.azure/
+**/azure-cli-cache/
+
+# JSON con datos sensibles
+**/*secrets*.json
+**/*credentials*.json
+**/*keys*.json
+
+# Archivos de backup que pueden contener datos sensibles
+**/*.bak
+**/*.backup
+**/*.old
+
+# ============================================================================
+# ARCHIVOS DEL SISTEMA
+# ============================================================================
+
+# Archivos del sistema Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Archivos del sistema macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Archivos del sistema Linux
+*~
+.directory
+.Trash-*
+
+# ============================================================================
+# HERRAMIENTAS DE DESARROLLO
+# ============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs y Editores
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+terraform.tfvars.json
+*.tfplan
+
+# ============================================================================
+# LOGS Y ARCHIVOS TEMPORALES
+# ============================================================================
+
+# Logs
+*.log
+logs/
+**/*.log
+
+# Archivos temporales
+*.tmp
+*.temp
+.cache/
+.sass-cache/
+
+# ============================================================================
+# AZURE ESPECÍFICO
+# ============================================================================
+
+# Archivos de parámetros con datos sensibles (mantener solo templates)
+**/parameters/*prod*
+**/parameters/*dev*
+!**/parameters/*.template.*
+!**/parameters/README.md
+
+# Archivos generados por scripts CLI
+**/generated-configs/
+**/output/
+**/deployments/logs/
+
+# Application Insights keys generados
+**/appinsights-keys.json
+**/monitoring-keys.json
+
+# ============================================================================
+# MANTENER ARCHIVOS DE TEMPLATE Y DOCUMENTACIÓN
+# ============================================================================
+
+# MANTENER estos archivos (usando !)
+!**/parameters/*.template.env
+!**/parameters/README.md
+!**/docs/
+!**/scripts/
+!README.md
+!SECURITY-README.md
