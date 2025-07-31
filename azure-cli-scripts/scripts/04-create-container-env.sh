@@ -52,12 +52,16 @@ echo -e "${GREEN}✅ Variables validadas${NC}"
 # Definir nombres de recursos
 CONTAINER_ENV_NAME="cae-${PROJECT_NAME}-${ENVIRONMENT}"
 LOG_WORKSPACE_FULL="log-${PROJECT_NAME}-${ENVIRONMENT}"
+VNET_NAME="vnet-${PROJECT_NAME}-${ENVIRONMENT}"
+CONTAINER_SUBNET_NAME="snet-containerapp"
 
 echo -e "\n${BLUE}📋 RECURSOS A CREAR:${NC}"
 echo "• Container Apps Environment: $CONTAINER_ENV_NAME"
 echo "• Ubicación: $LOCATION"
 echo "• Resource Group: $RESOURCE_GROUP"
 echo "• Log Analytics: $LOG_WORKSPACE_FULL"
+echo "• VNet: $VNET_NAME"
+echo "• Subnet: $CONTAINER_SUBNET_NAME"
 
 # CHECKPOINT: Verificar que Log Analytics existe
 echo -e "\n${YELLOW}🔍 CHECKPOINT: Verificando Log Analytics Workspace...${NC}"
@@ -73,6 +77,22 @@ if [[ -z "$LOG_WORKSPACE_ID" ]]; then
 fi
 
 echo -e "${GREEN}✅ Log Analytics Workspace encontrado: $LOG_WORKSPACE_ID${NC}"
+
+# CHECKPOINT: Verificar que la VNet y subnet existen
+echo -e "\n${YELLOW}🔍 CHECKPOINT: Verificando VNet y Subnet...${NC}"
+SUBNET_ID=$(az network vnet subnet show \
+    --resource-group "$RESOURCE_GROUP" \
+    --vnet-name "$VNET_NAME" \
+    --name "$CONTAINER_SUBNET_NAME" \
+    --query "id" -o tsv 2>/dev/null || echo "")
+
+if [[ -z "$SUBNET_ID" ]]; then
+    echo -e "${RED}❌ Subnet para Container Apps no encontrada${NC}"
+    echo "Ejecuta primero: ./02-create-networking.sh"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Subnet encontrada: $SUBNET_ID${NC}"
 
 # Verificar si Container Apps Environment ya existe
 echo -e "\n${YELLOW}🔍 CHECKPOINT: Verificando si Container Apps Environment existe...${NC}"
@@ -100,13 +120,17 @@ echo "az containerapp env create \\"
 echo "  --name $CONTAINER_ENV_NAME \\"
 echo "  --resource-group $RESOURCE_GROUP \\"
 echo "  --location $LOCATION \\"
-echo "  --logs-workspace-id $LOG_WORKSPACE_ID"
+echo "  --logs-workspace-id $LOG_WORKSPACE_ID \\"
+echo "  --infrastructure-subnet-resource-id $SUBNET_ID \\"
+echo "  --internal-only"
 
 az containerapp env create \
     --name "$CONTAINER_ENV_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --location "$LOCATION" \
     --logs-workspace-id "$LOG_WORKSPACE_ID" \
+    --infrastructure-subnet-resource-id "$SUBNET_ID" \
+    --internal-only \
     --output table
 
 # APRENDIZAJE: Conceptos técnicos

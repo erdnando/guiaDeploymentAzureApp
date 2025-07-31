@@ -92,12 +92,20 @@ resource "azurerm_virtual_network" "main" {
 # SUBNETS
 # =========================================
 
-# 🐳 Container Apps subnet
-resource "azurerm_subnet" "container_apps" {
-  name                 = "snet-container-apps"
+# 🌐 Application Gateway subnet
+resource "azurerm_subnet" "gateway" {
+  name                 = "subnet-appgateway"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.1.0/24"]
+}
+
+# 🐳 Container Apps subnet
+resource "azurerm_subnet" "container_apps" {
+  name                 = "subnet-containerapp"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.2.0/24"]
 
   delegation {
     name = "Microsoft.App/environments"
@@ -110,19 +118,13 @@ resource "azurerm_subnet" "container_apps" {
 
 # 🗄️ Database subnet with private endpoint support
 resource "azurerm_subnet" "database" {
-  name                 = "snet-database"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = ["10.0.2.0/24"]
-
-  # Enable private endpoints
-  private_endpoint_network_policies = "Disabled"
-} # 🌐 Application Gateway subnet
-resource "azurerm_subnet" "gateway" {
-  name                 = "snet-gateway"
+  name                 = "subnet-database"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.3.0/24"]
+
+  # Enable private endpoints
+  private_endpoint_network_policies = "Disabled"
 }
 
 # =========================================
@@ -171,7 +173,7 @@ resource "azurerm_network_security_rule" "database_postgresql" {
   protocol                    = "Tcp"
   source_port_range           = "*"
   destination_port_range      = "5432"
-  source_address_prefix       = "10.0.1.0/24" # Container subnet
+  source_address_prefix       = "10.0.2.0/24" # Container subnet
   destination_address_prefix  = "*"
   resource_group_name         = azurerm_resource_group.main.name
   network_security_group_name = azurerm_network_security_group.database.name

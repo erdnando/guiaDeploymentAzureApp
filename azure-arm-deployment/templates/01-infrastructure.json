@@ -37,14 +37,14 @@
     },
     "appGatewaySubnetPrefix": {
       "type": "string",
-      "defaultValue": "10.0.0.0/24",
+      "defaultValue": "10.0.1.0/24",
       "metadata": {
         "description": "Prefijo de subred para Application Gateway"
       }
     },
     "containerAppSubnetPrefix": {
       "type": "string",
-      "defaultValue": "10.0.8.0/21",
+      "defaultValue": "10.0.2.0/24",
       "metadata": {
         "description": "Prefijo de subred para Container Apps"
       }

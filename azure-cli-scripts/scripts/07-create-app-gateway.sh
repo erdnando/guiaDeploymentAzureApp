@@ -179,6 +179,54 @@ if [[ -n "$APPGW_EXISTS" ]]; then
         exit 0
     fi
 else
+    # 🛡️ CREAR WAF POLICY PRIMERO
+    echo -e "\n${BLUE}🛡️ CREANDO WAF POLICY...${NC}"
+    WAF_POLICY_NAME="wafpol-${PROJECT_NAME}-${ENVIRONMENT}"
+
+    echo "Creando WAF Policy: $WAF_POLICY_NAME"
+    az network application-gateway waf-policy create \
+        --name "$WAF_POLICY_NAME" \
+        --resource-group "$RESOURCE_GROUP" \
+        --location "$LOCATION" \
+        --tags \
+            Project="$PROJECT_NAME" \
+            Environment="$ENVIRONMENT" \
+            Purpose="WAF-Protection" \
+        --output table
+
+    success "WAF Policy creada: $WAF_POLICY_NAME"
+
+    # Configurar reglas OWASP
+    echo -e "\n${BLUE}🔒 CONFIGURANDO REGLAS OWASP...${NC}"
+    az network application-gateway waf-policy managed-rule rule-set add \
+        --policy-name "$WAF_POLICY_NAME" \
+        --resource-group "$RESOURCE_GROUP" \
+        --type "OWASP" \
+        --version "3.2" \
+        --output table
+
+    # Configurar policy settings
+    if [[ "$ENVIRONMENT" == "prod" ]]; then
+        WAF_MODE="Prevention"
+        APPGW_SKU="WAF_v2"
+    else
+        WAF_MODE="Detection"
+        APPGW_SKU="WAF_v2"  # Usar WAF también en dev para consistencia
+    fi
+
+    echo "Configurando WAF mode: $WAF_MODE"
+    az network application-gateway waf-policy policy-setting update \
+        --policy-name "$WAF_POLICY_NAME" \
+        --resource-group "$RESOURCE_GROUP" \
+        --mode "$WAF_MODE" \
+        --state "Enabled" \
+        --request-body-check true \
+        --max-request-body-size 128 \
+        --file-upload-limit 100 \
+        --output table
+
+    success "WAF Policy configurada en modo: $WAF_MODE"
+
     # Crear Application Gateway
     echo -e "\n${BLUE}🚀 CREANDO APPLICATION GATEWAY...${NC}"
     echo "Esto puede tomar 10-15 minutos..."
@@ -191,7 +239,8 @@ else
     echo "  --vnet-name $VNET_NAME \\"
     echo "  --subnet $APPGW_SUBNET_NAME \\"
     echo "  --capacity 2 \\"
-    echo "  --sku Standard_v2 \\"
+    echo "  --sku $APPGW_SKU \\"
+    echo "  --waf-policy $WAF_POLICY_NAME \\"
     echo "  --http-settings-cookie-based-affinity Disabled \\"
     echo "  --frontend-port 80 \\"
     echo "  --http-settings-port 443 \\"
@@ -206,20 +255,67 @@ else
         --vnet-name "$VNET_NAME" \
         --subnet "$APPGW_SUBNET_NAME" \
         --capacity 2 \
-        --sku Standard_v2 \
+        --sku "$APPGW_SKU" \
+        --waf-policy "$WAF_POLICY_NAME" \
         --http-settings-cookie-based-affinity Disabled \
         --frontend-port 80 \
         --http-settings-port 443 \
         --http-settings-protocol Https \
         --public-ip-address "$APPGW_PIP_NAME" \
         --servers "$API_GATEWAY_FQDN" \
+        --tags \
+            Project="$PROJECT_NAME" \
+            Environment="$ENVIRONMENT" \
+            Purpose="Application-Gateway-WAF" \
         --output table
 
-    echo -e "${GREEN}✅ Application Gateway creado${NC}"
+    echo -e "${GREEN}✅ Application Gateway creado con WAF habilitado${NC}"
+    
+    # Configurar diagnostic logging
+    echo -e "\n${BLUE}📊 CONFIGURANDO DIAGNOSTIC LOGGING...${NC}"
+    LOG_WORKSPACE_NAME="log-${PROJECT_NAME}-${ENVIRONMENT}-cli"
+    
+    # Obtener workspace ID
+    WORKSPACE_ID=$(az monitor log-analytics workspace show \
+        --resource-group "$RESOURCE_GROUP" \
+        --workspace-name "$LOG_WORKSPACE_NAME" \
+        --query "id" -o tsv 2>/dev/null || echo "")
+        
+    if [[ -n "$WORKSPACE_ID" ]]; then
+        az monitor diagnostic-settings create \
+            --name "diag-agw-${PROJECT_NAME}-${ENVIRONMENT}" \
+            --resource "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Network/applicationGateways/$APPGW_NAME" \
+            --workspace "$WORKSPACE_ID" \
+            --logs '[
+                {
+                    "category": "ApplicationGatewayAccessLog",
+                    "enabled": true
+                },
+                {
+                    "category": "ApplicationGatewayPerformanceLog", 
+                    "enabled": true
+                },
+                {
+                    "category": "ApplicationGatewayFirewallLog",
+                    "enabled": true
+                }
+            ]' \
+            --metrics '[
+                {
+                    "category": "AllMetrics",
+                    "enabled": true
+                }
+            ]' \
+            --output table
+            
+        success "Diagnostic logging configurado"
+    else
+        warning "Log Analytics workspace no encontrado, diagnostic logging omitido"
+    fi
 fi
 
 # APRENDIZAJE: Conceptos técnicos
-echo -e "\n${YELLOW}📚 APRENDIZAJE: Application Gateway${NC}"
+echo -e "\n${YELLOW}📚 APRENDIZAJE: Application Gateway + WAF${NC}"
 echo ""
 echo "🏗️  ARQUITECTURA LAYER 7:"
 echo "   • Frontend: Listener en puerto 80/443"
@@ -233,11 +329,19 @@ echo "   • Path-based Routing: /api/users → User API, /api/payments → Paym
 echo "   • Health Probes: Verificación automática de salud"
 echo "   • Session Affinity: Sticky sessions si es necesario"
 echo ""
-echo "🛡️  SEGURIDAD Y PERFORMANCE:"
-echo "   • WAF Integration: Protección contra OWASP Top 10"
-echo "   • Autoscaling: Escala basado en demanda"
-echo "   • Connection Draining: Graceful shutdown"
-echo "   • Custom Headers: Inyección de headers personalizados"
+echo "🛡️  SEGURIDAD Y WAF:"
+echo "   • WAF Policy: ${WAF_POLICY_NAME}"
+echo "   • OWASP Rule Set: Versión 3.2"
+echo "   • Mode: ${WAF_MODE} (Detection en dev, Prevention en prod)"
+echo "   • Protection: SQL Injection, XSS, CSRF, etc."
+echo "   • Request Limits: 128KB body, 100MB uploads"
+echo "   • Diagnostic Logging: Access, Performance, Firewall logs"
+echo ""
+echo "📊 MONITOREO CONFIGURADO:"
+echo "   • Log Analytics Integration: Centralized logging"
+echo "   • ApplicationGatewayAccessLog: Request/response details"
+echo "   • ApplicationGatewayFirewallLog: WAF block/allow decisions"
+echo "   • ApplicationGatewayPerformanceLog: Performance metrics"
 
 # Configurar routing adicional si Container Apps existen
 if [[ "$API_GATEWAY_FQDN" != "httpbin.org" ]]; then

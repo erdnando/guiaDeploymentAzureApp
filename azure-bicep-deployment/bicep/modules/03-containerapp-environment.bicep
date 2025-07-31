@@ -20,6 +20,9 @@ param location string = resourceGroup().location
 @description('Nombre del workspace de Log Analytics')
 param logAnalyticsWorkspaceName string
 
+@description('ID de la subnet de infraestructura para Container Apps')
+param infrastructureSubnetId string
+
 @description('Centro de costos para facturación')
 param costCenter string = 'IT-Development'
 
@@ -57,13 +60,9 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' 
         sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
       }
     }
-    zoneRedundant: false
-    kedaConfiguration: {}
-    daprConfiguration: {}
-    customDomainConfiguration: {
-      dnsSuffix: ''
-      certificatePassword: ''
-      certificateValue: ''
+    vnetConfiguration: {
+      infrastructureSubnetId: infrastructureSubnetId
+      internal: true
     }
   }
 }

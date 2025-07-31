@@ -43,7 +43,7 @@ az postgres flexible-server create \
   --admin-password $DB_ADMIN_PASSWORD \
   --sku-name Standard_B1ms \
   --tier Burstable \
-  --version 13 \
+  --version 14 \
   --storage-size 32 \
   --backup-retention 7 \
   --geo-redundant-backup Disabled \

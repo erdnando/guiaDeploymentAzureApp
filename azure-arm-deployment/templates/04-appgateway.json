@@ -61,6 +61,17 @@
         "description": "Número de instancias del Application Gateway"
       }
     },
+    "wafMode": {
+      "type": "string",
+      "defaultValue": "[if(equals(parameters('environment'), 'prod'), 'Prevention', 'Detection')]",
+      "allowedValues": [
+        "Detection",
+        "Prevention"
+      ],
+      "metadata": {
+        "description": "Modo WAF: Detection para dev/test, Prevention para prod"
+      }
+    },
     "apiBackendFQDN": {
       "type": "string",
       "defaultValue": "api-temp.placeholder.com",
@@ -93,6 +104,7 @@
   "variables": {
     "applicationGatewayName": "[concat('appgw-', parameters('projectName'), '-', parameters('environment'))]",
     "publicIPAddressName": "[concat('pip-', parameters('projectName'), '-', parameters('environment'), '-appgw')]",
+    "wafPolicyName": "[concat('wafpol-', parameters('projectName'), '-', parameters('environment'))]",
     "applicationGatewaySubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('appGatewaySubnetName'))]",
     "commonTags": {
       "Environment": "[parameters('environment')]",
@@ -105,6 +117,59 @@
     }
   },
   "resources": [
+    {
+      "type": "Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('wafPolicyName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "policySettings": {
+          "requestBodyCheck": true,
+          "maxRequestBodySizeInKb": 128,
+          "fileUploadLimitInMb": 100,
+          "state": "Enabled",
+          "mode": "[parameters('wafMode')]"
+        },
+        "managedRules": {
+          "managedRuleSets": [
+            {
+              "ruleSetType": "OWASP",
+              "ruleSetVersion": "3.2",
+              "ruleGroupOverrides": [
+                {
+                  "ruleGroupName": "REQUEST-920-PROTOCOL-ENFORCEMENT",
+                  "rules": [
+                    {
+                      "ruleId": "920300",
+                      "state": "Enabled",
+                      "action": "Log"
+                    },
+                    {
+                      "ruleId": "920440",
+                      "state": "Enabled",
+                      "action": "Log"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "exclusions": [
+            {
+              "matchVariable": "RequestHeaderNames",
+              "selectorMatchOperator": "Equals",
+              "selector": "x-company-secret-header"
+            },
+            {
+              "matchVariable": "RequestCookieNames",
+              "selectorMatchOperator": "EndsWith",
+              "selector": "too-tasty"
+            }
+          ]
+        }
+      }
+    },
     {
       "type": "Microsoft.Network/publicIPAddresses",
       "apiVersion": "2023-04-01",
@@ -128,13 +193,17 @@
       "location": "[parameters('location')]",
       "tags": "[variables('commonTags')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]",
+        "[resourceId('Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies', variables('wafPolicyName'))]"
       ],
       "properties": {
         "sku": {
           "name": "[parameters('skuName')]",
           "tier": "[parameters('skuName')]",
           "capacity": "[parameters('capacity')]"
+        },
+        "firewallPolicy": {
+          "id": "[resourceId('Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies', variables('wafPolicyName'))]"
         },
         "gatewayIPConfigurations": [
           {

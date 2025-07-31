@@ -32,9 +32,17 @@ param costCenter string = 'IT-Development'
 @description('Responsable del recurso')
 param owner string = 'DevOps-Team'
 
+@description('Modo WAF: Detection para dev/test, Prevention para prod')
+@allowed([
+  'Detection'
+  'Prevention'
+])
+param wafMode string = environment == 'prod' ? 'Prevention' : 'Detection'
+
 // Variables
 var applicationGatewayName = 'agw-${projectName}-${environment}-${uniqueString(resourceGroup().id)}'
 var publicIpName = 'pip-${applicationGatewayName}'
+var wafPolicyName = 'wafpol-${projectName}-${environment}'
 
 var commonTags = {
   Environment: environment
@@ -55,6 +63,59 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-05-01' existing 
 resource subnet 'Microsoft.Network/virtualNetworks/subnets@2023-05-01' existing = {
   parent: virtualNetwork
   name: subnetName
+}
+
+// WAF Policy
+resource wafPolicy 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies@2023-04-01' = {
+  name: wafPolicyName
+  location: location
+  tags: commonTags
+  properties: {
+    policySettings: {
+      requestBodyCheck: true
+      maxRequestBodySizeInKb: 128
+      fileUploadLimitInMb: 100
+      state: 'Enabled'
+      mode: wafMode
+    }
+    managedRules: {
+      managedRuleSets: [
+        {
+          ruleSetType: 'OWASP'
+          ruleSetVersion: '3.2'
+          ruleGroupOverrides: [
+            {
+              ruleGroupName: 'REQUEST-920-PROTOCOL-ENFORCEMENT'
+              rules: [
+                {
+                  ruleId: '920300'
+                  state: 'Enabled'
+                  action: 'Log'
+                }
+                {
+                  ruleId: '920440'
+                  state: 'Enabled'
+                  action: 'Log'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+      exclusions: [
+        {
+          matchVariable: 'RequestHeaderNames'
+          selectorMatchOperator: 'Equals'
+          selector: 'x-company-secret-header'
+        }
+        {
+          matchVariable: 'RequestCookieNames'
+          selectorMatchOperator: 'EndsWith'
+          selector: 'too-tasty'
+        }
+      ]
+    }
+  }
 }
 
 // Public IP for Application Gateway
@@ -82,9 +143,12 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-05-01' =
   tags: commonTags
   properties: {
     sku: {
-      name: 'Standard_v2'
-      tier: 'Standard_v2'
+      name: 'WAF_v2'
+      tier: 'WAF_v2'
       capacity: 1
+    }
+    firewallPolicy: {
+      id: wafPolicy.id
     }
     gatewayIPConfigurations: [
       {

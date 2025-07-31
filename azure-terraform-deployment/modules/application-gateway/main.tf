@@ -170,8 +170,8 @@ resource "azurerm_application_gateway" "main" {
 
   # 📊 SKU configuration
   sku {
-    name     = var.environment == "prod" ? "WAF_v2" : "Standard_v2"
-    tier     = var.environment == "prod" ? "WAF_v2" : "Standard_v2"
+    name     = "WAF_v2" # Usar WAF en todos los environments para consistencia
+    tier     = "WAF_v2"
     capacity = var.environment == "prod" ? 2 : 1
   }
 

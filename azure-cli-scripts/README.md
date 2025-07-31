@@ -85,6 +85,10 @@ Si prefieres control total, sigue este orden exacto:
 # Paso 3: Crear base de datos
 ./scripts/03-create-database.sh
 
+# 🏗️ **CONFIGURACIÓN AVANZADA**: Para alta disponibilidad PostgreSQL:
+# 📖 Ver: docs/AVANZADO-ALTA-DISPONIBILIDAD.md
+# 🚀 Incluye: Zone-Redundant HA, Primary Zone 1, Standby Zone 2, 99.99% SLA
+
 # Paso 4: Container Apps Environment
 ./scripts/04-create-container-env.sh
 

@@ -21,10 +21,10 @@ param environment string = 'dev'
 param vnetAddressPrefix string = '10.0.0.0/16'
 
 @description('Prefijo de subred para Application Gateway')
-param appGatewaySubnetPrefix string = '10.0.0.0/24'
+param appGatewaySubnetPrefix string = '10.0.1.0/24'
 
 @description('Prefijo de subred para Container Apps')
-param containerAppSubnetPrefix string = '10.0.8.0/21'
+param containerAppSubnetPrefix string = '10.0.2.0/24'
 
 @description('Centro de costos para facturación')
 param costCenter string = 'IT-Development'

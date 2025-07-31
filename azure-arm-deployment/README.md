@@ -46,6 +46,7 @@ Esta implementación ARM proporciona un sistema de pagos completo en Azure con c
 | 🎓 **Principiante** | [docs/GUIA-INGENIERO-ARM-PASO-A-PASO.md](./docs/GUIA-INGENIERO-ARM-PASO-A-PASO.md) | ✅ **Primera vez con ARM**<br/>✅ Vienes de otros IaC tools<br/>✅ Necesitas explicaciones detalladas |
 | 📖 **Intermedio** | [docs/plantillas_arm_azure.md](./docs/plantillas_arm_azure.md) | ✅ **Ya sabes ARM básico**<br/>✅ Quieres referencia técnica<br/>✅ Buscas troubleshooting avanzado |
 | ⚡ **Rápido** | [docs/QUICK-REFERENCE-ARM.md](./docs/QUICK-REFERENCE-ARM.md) | ✅ **Ya desplegaste antes**<br/>✅ Solo necesitas comandos<br/>✅ Referencia rápida |
+| 🏗️ **Avanzado** | [docs/AVANZADO-ALTA-DISPONIBILIDAD.md](./docs/AVANZADO-ALTA-DISPONIBILIDAD.md) | ✅ **Alta Disponibilidad PostgreSQL**<br/>✅ Zone-Redundant (99.99% SLA)<br/>✅ Primary Zone 1, Standby Zone 2 |
 
 ### � **Documentación Técnica Adicional**
 | **Tipo** | **Documento** | **Propósito** |

@@ -6,8 +6,21 @@
 set -e
 
 echo "🌐 FASE 1: NETWORKING DESDE CERO"
-echo "==============================="
-echo ""
+echo "=========================# Asociar NSG con subnet de Application Gateway
+az network vnet subnet update \
+  --resource-group $RESOURCE_GROUP \
+  --vnet-name "vnet-$PROJECT_NAME-$ENVIRONMENT" \
+  --name "subnet-appgateway" \
+  --network-security-group "nsg-appgw-$ENVIRONMENT" \
+  --output table
+
+# Asociar NSG con subnet de Container Apps
+az network vnet subnet update \
+  --resource-group $RESOURCE_GROUP \
+  --vnet-name "vnet-$PROJECT_NAME-$ENVIRONMENT" \
+  --name "subnet-containerapp" \
+  --network-security-group "nsg-containerapp-$ENVIRONMENT" \
+  --output table
 
 # Colores para output
 RED='\033[0;31m'
@@ -54,27 +67,27 @@ echo "🔧 Creando subnets especializadas..."
 az network vnet subnet create \
   --resource-group $RESOURCE_GROUP \
   --vnet-name "vnet-$PROJECT_NAME-$ENVIRONMENT" \
-  --name "snet-containerapp" \
-  --address-prefix "10.0.1.0/24" \
+  --name "subnet-containerapp" \
+  --address-prefix "10.0.2.0/24" \
   --output table
 
-success "Subnet Container Apps: 10.0.1.0/24 (254 IPs)"
+success "Subnet Container Apps: 10.0.2.0/24 (254 IPs)"
 
 # Subnet para Application Gateway
 az network vnet subnet create \
   --resource-group $RESOURCE_GROUP \
   --vnet-name "vnet-$PROJECT_NAME-$ENVIRONMENT" \
-  --name "snet-appgateway" \
-  --address-prefix "10.0.2.0/24" \
+  --name "subnet-appgateway" \
+  --address-prefix "10.0.1.0/24" \
   --output table
 
-success "Subnet Application Gateway: 10.0.2.0/24 (254 IPs)"
+success "Subnet Application Gateway: 10.0.1.0/24 (254 IPs)"
 
 # Subnet para Database (para futuro Private Endpoint)
 az network vnet subnet create \
   --resource-group $RESOURCE_GROUP \
   --vnet-name "vnet-$PROJECT_NAME-$ENVIRONMENT" \
-  --name "snet-database" \
+  --name "subnet-database" \
   --address-prefix "10.0.3.0/24" \
   --output table
 
@@ -167,9 +180,9 @@ az network nsg rule create \
   --name "AllowFromAppGateway" \
   --priority 100 \
   --protocol Tcp \
-  --source-address-prefixes "10.0.2.0/24" \
+  --source-address-prefixes "10.0.1.0/24" \
   --source-port-ranges "*" \
-  --destination-address-prefixes "10.0.1.0/24" \
+  --destination-address-prefixes "10.0.2.0/24" \
   --destination-port-ranges 80 443 \
   --access Allow \
   --direction Inbound \
@@ -182,9 +195,9 @@ az network nsg rule create \
   --name "AllowInternalTraffic" \
   --priority 110 \
   --protocol "*" \
-  --source-address-prefixes "10.0.1.0/24" \
+  --source-address-prefixes "10.0.2.0/24" \
   --source-port-ranges "*" \
-  --destination-address-prefixes "10.0.1.0/24" \
+  --destination-address-prefixes "10.0.2.0/24" \
   --destination-port-ranges "*" \
   --access Allow \
   --direction Inbound \
@@ -226,8 +239,8 @@ az network vnet subnet list \
 
 # Guardar información de red para otros scripts
 echo "export VNET_NAME=\"vnet-$PROJECT_NAME-$ENVIRONMENT\"" >> /tmp/cli-vars.env
-echo "export CONTAINER_SUBNET=\"snet-containerapp\"" >> /tmp/cli-vars.env
-echo "export APPGW_SUBNET=\"snet-appgateway\"" >> /tmp/cli-vars.env
+echo "export CONTAINER_SUBNET=\"subnet-containerapp\"" >> /tmp/cli-vars.env
+echo "export APPGW_SUBNET=\"subnet-appgateway\"" >> /tmp/cli-vars.env
 
 echo ""
 success "🎉 NETWORKING COMPLETADO!"

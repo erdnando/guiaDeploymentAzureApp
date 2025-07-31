@@ -43,11 +43,12 @@ Esta implementación BICEP proporciona un sistema de pagos completo en Azure con
 
 ### 🎓 **Para Ingenieros Principiantes (EMPEZAR AQUÍ)**
 
-| **Paso** | **Documento** | **¿Cuándo usar?** | **Tiempo** |
-|----------|---------------|--------------------|------------|
-| **1. 🚀 COMENZAR AQUÍ** | [docs/GUIA-INGENIERO-BICEP-PASO-A-PASO.md](./docs/GUIA-INGENIERO-BICEP-PASO-A-PASO.md) | ✅ **Primera vez con BICEP**<br/>✅ Vienes de ARM Templates<br/>✅ Quieres aprender paso a paso | **2-4 horas** |
-| **2. 📖 Profundizar** | [docs/bicep-guide.md](./docs/bicep-guide.md) | ✅ **Completaste la guía principal**<br/>✅ Quieres entender ARM vs BICEP<br/>✅ Análisis técnico detallado | **1 hora** |
-| **3. ⚡ Referencia** | [docs/QUICK-REFERENCE-BICEP.md](./docs/QUICK-REFERENCE-BICEP.md) | ✅ **Ya sabes hacer deploy**<br/>✅ Solo necesitas comandos rápidos<br/>✅ Referencia para el día a día | **15 min** |
+| **Nivel** | **Documento** | **Cuándo Usar** |
+|-----------|---------------|----------------|
+| 🎓 **Principiante** | [docs/GUIA-INGENIERO-BICEP-PASO-A-PASO.md](./docs/GUIA-INGENIERO-BICEP-PASO-A-PASO.md) | ✅ **Primera vez con Bicep**<br/>✅ Vienes de ARM JSON<br/>✅ Necesitas explicaciones detalladas |
+| 📖 **Intermedio** | [docs/bicep-guide.md](./docs/bicep-guide.md) | ✅ **Ya sabes Bicep básico**<br/>✅ Quieres referencia técnica<br/>✅ Buscas troubleshooting avanzado |
+| ⚡ **Rápido** | [docs/QUICK-REFERENCE-BICEP.md](./docs/QUICK-REFERENCE-BICEP.md) | ✅ **Ya desplegaste antes**<br/>✅ Solo necesitas comandos<br/>✅ Referencia rápida |
+| 🏗️ **Avanzado** | [docs/AVANZADO-ALTA-DISPONIBILIDAD.md](./docs/AVANZADO-ALTA-DISPONIBILIDAD.md) | ✅ **Alta Disponibilidad PostgreSQL**<br/>✅ Zone-Redundant (99.99% SLA)<br/>✅ Primary Zone 1, Standby Zone 2 |
 
 ### 📋 **Documentación Técnica (Para después)**
 

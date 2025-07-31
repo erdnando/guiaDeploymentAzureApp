@@ -85,8 +85,19 @@ param containerPort int = 80
 @description('Número mínimo de réplicas')
 param minReplicas int = 1
 
-@description('Número máximo de réplicas')
+@description('Número máximo de réplicas para Container Apps')
 param maxReplicas int = 3
+
+@description('Modo WAF para Application Gateway')
+@allowed([
+  'Detection'
+  'Prevention'
+])
+param wafMode string = environment == 'prod' ? 'Prevention' : 'Detection'
+
+// ============================================================================
+// VARIABLES
+// ============================================================================
 
 @description('CPU por contenedor')
 param containerCpu string = '0.25'
@@ -159,6 +170,7 @@ module containerEnvironment 'bicep/modules/03-containerapp-environment.bicep' = 
     environment: environment
     location: location
     logAnalyticsWorkspaceName: infrastructure.outputs.logAnalyticsWorkspaceName
+    infrastructureSubnetId: infrastructure.outputs.containerAppSubnetId
     costCenter: costCenter
     owner: owner
   }
@@ -229,6 +241,7 @@ module applicationGateway 'bicep/modules/04-application-gateway.bicep' = {
     virtualNetworkName: infrastructure.outputs.vnetName
     subnetName: infrastructure.outputs.appGatewaySubnetName
     containerAppFQDN: containerApps.outputs.containerAppFQDN
+    wafMode: wafMode
     costCenter: costCenter
     owner: owner
   }

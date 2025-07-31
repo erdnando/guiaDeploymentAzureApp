@@ -117,11 +117,11 @@ resource "azurerm_postgresql_flexible_server" "main" {
   administrator_password = random_password.postgresql_admin.result
 
   # 📊 Server configuration
-  sku_name = var.environment == "prod" ? "GP_Standard_D2s_v3" : "B_Standard_B1ms"
+  sku_name = "Standard_B1ms"
   version  = "14"
 
   # 💾 Storage configuration
-  storage_mb            = var.environment == "prod" ? 32768 : 32768 # 32GB
+  storage_mb            = 32768 # 32GB consistente
   backup_retention_days = var.environment == "prod" ? 35 : 7
 
   # 🔒 Security settings

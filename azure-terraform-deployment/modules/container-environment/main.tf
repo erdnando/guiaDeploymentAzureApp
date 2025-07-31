@@ -85,9 +85,6 @@ resource "azurerm_container_app_environment" "main" {
   infrastructure_subnet_id       = var.subnet_id
   internal_load_balancer_enabled = true
 
-  # 🔒 Zone redundancy for production
-  zone_redundancy_enabled = var.environment == "prod" ? true : false
-
   # 🏷️ Governance tags
   tags = local.container_tags
 }
